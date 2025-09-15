@@ -49,6 +49,7 @@ export function useItem<T extends Item>(
 	collection: Ref<string>,
 	primaryKey: Ref<PrimaryKey | null>,
 	query: MaybeRef<Query> = {},
+	prefillValues: MaybeRef<Record<string, any>> = {},
 ): UsableItem<T> {
 	const { info: collectionInfo, primaryKeyField } = useCollection(collection);
 	const item: Ref<T | null> = ref(null);
@@ -86,9 +87,19 @@ export function useItem<T extends Item>(
 		return `${getEndpoint(collection.value)}/${encodeURIComponent(primaryKey.value as string)}`;
 	});
 
-	const defaultValues = getDefaultValuesFromFields(fieldsWithPermissions);
+	const defaultValues = computed(() => {
+		const schemaDefaults = getDefaultValuesFromFields(fieldsWithPermissions).value;
+		
+		// For new items, merge in prefill values from URL parameters
+		if (isNew.value) {
+			const prefill = unref(prefillValues);
+			return { ...schemaDefaults, ...prefill };
+		}
+		
+		return schemaDefaults;
+	});
 
-	watch([collection, primaryKey, ...(isRef(query) ? [query] : [])], refresh);
+	watch([collection, primaryKey, ...(isRef(query) ? [query] : []), ...(isRef(prefillValues) ? [prefillValues] : [])], refresh);
 
 	refreshItem();
 
