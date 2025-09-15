@@ -101,6 +101,13 @@ export function useItem<T extends Item>(
 
 	watch([collection, primaryKey, ...(isRef(query) ? [query] : []), ...(isRef(prefillValues) ? [prefillValues] : [])], refresh);
 
+	// Watch for changes in defaultValues for new items to update the item value
+	watch(defaultValues, (newDefaults) => {
+		if (isNew.value) {
+			item.value = newDefaults as T;
+		}
+	}, { deep: true });
+
 	refreshItem();
 
 	const { nestedValidationErrors } = useNestedValidation();
@@ -547,7 +554,8 @@ export function useItem<T extends Item>(
 
 	function refreshItem() {
 		if (isNew.value) {
-			item.value = null;
+			// For new items, set item to default values (including prefill values)
+			item.value = defaultValues.value as T;
 		} else {
 			getItem();
 		}
